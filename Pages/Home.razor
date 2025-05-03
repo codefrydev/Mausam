@@ -1,0 +1,283 @@
+﻿@page "/"
+@using System.Timers
+@using Mausam.Models
+@inject HttpClient Http
+@inject IJSRuntime JsRuntime
+@implements IDisposable
+
+<div class="container">
+    <h1>WeatherSphere</h1>
+    <div class="search-box">
+        <div class="suggestions-container">
+            <input type="text" @bind="_searchQuery" @oninput="HandleSearchInput" placeholder="Enter city name..." />
+            @if (_showSuggestions)
+            {
+                <div class="suggestions-list">
+                    @foreach (var suggestion in _suggestions)
+                    {
+                        <div class="suggestion-item" @onclick="() => SelectSuggestion(suggestion)">
+                            @suggestion.DisplayName
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+        <button @onclick="SearchByCity">
+            <i class="fas fa-search"></i> Search
+        </button>
+    </div>
+    
+    <div class="button-group">
+        <button class="location-btn" @onclick="GetCurrentLocation">
+            <i class="fas fa-location-dot"></i> Current Location
+        </button>
+    </div>
+
+    @if (_isLoading)
+    {
+        <div class="loader"></div>
+    }
+    else if (_hasError)
+    {
+        <div class="error">@_errorMessage</div>
+    }
+    <div class="weather-card">
+        @if (_currentWeather != null)
+        {
+            <div class="current-weather">
+                <div>
+                    <h2>@_locationName</h2>
+                    <div class="temp">@_currentWeather.Temperature°C</div>
+                    <div class="weather-icon">@GetWeatherIcon(_currentWeather.WeatherCode)</div>
+                </div>
+                <div>
+                    <p><i class="fas fa-wind"></i> Wind: @_currentWeather.WindSpeed km/h</p>
+                    <p><i class="fas fa-tint"></i> Precipitation: @_currentWeather.Precipitation mm</p>
+                </div>
+            </div>
+        }
+
+        <div class="chart-container">
+            <canvas id="temperatureChart"></canvas>
+        </div>
+        @if (_currentWeather != null)
+        {
+            <h3>7-Day Forecast</h3>
+            <div class="forecast">
+                @foreach (var day in _dailyForecast)
+                {
+                    <div class="forecast-day">
+                        <div>@day.Date.ToString("ddd")</div>
+                        <div class="weather-icon">@GetWeatherIcon(day.WeatherCode)</div>
+                        <div>@day.MaxTemp°</div>
+                        <div>@day.MinTemp°</div>
+                    </div>
+                }
+            </div>
+        }
+    </div> 
+</div> 
+@code {
+    private string _searchQuery =string.Empty;
+    private bool _showSuggestions;
+    private List<LocationSuggestion> _suggestions = [];
+    private Timer _debounceTimer;
+    
+    private bool _isLoading;
+    private bool _hasError;
+    private string _errorMessage = "";
+
+    private WeatherResponse _weatherResponse;
+    private CurrentWeather _currentWeather;
+    private List<DailyForecast> _dailyForecast = [];
+    private string _locationName = "";
+    
+
+    protected override void OnInitialized()
+    {
+        _debounceTimer = new Timer(300);
+        _debounceTimer.Elapsed += async (sender, e) => await FetchSuggestions();
+        _debounceTimer.AutoReset = false;
+    }  
+    private async void HandleSearchInput(ChangeEventArgs e)
+    {
+        _searchQuery = e.Value?.ToString();
+        _debounceTimer.Stop();
+        _debounceTimer.Start();
+    }
+    private async Task RenderChart()
+    {
+        await InitializeChart(_weatherResponse.Hourly);
+    }
+    private async Task FetchSuggestions()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            _showSuggestions = false;
+            return;
+        }
+
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<LocationSuggestion>>(
+                $"https://nominatim.openstreetmap.org/search?format=json&q={Uri.EscapeDataString(_searchQuery)}&limit=5");
+
+            _suggestions = response;
+            _showSuggestions = true;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            _showSuggestions = false;
+        }
+    }
+
+    private async Task SelectSuggestion(LocationSuggestion suggestion)
+    {
+        _searchQuery = suggestion.DisplayName;
+        _showSuggestions = false;
+        await LoadWeatherData(suggestion.Lat, suggestion.Lon, suggestion.DisplayName);
+    }
+
+    private async Task SearchByCity()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery)) return;
+        
+        _isLoading = true;
+        _hasError = false;
+        StateHasChanged();
+
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<LocationSuggestion>>(
+                $"https://nominatim.openstreetmap.org/search?format=json&q={Uri.EscapeDataString(_searchQuery)}");
+
+            if (response?.Count == 0) throw new Exception("City not found");
+            var first = response.First();
+            await LoadWeatherData(first.Lat, first.Lon, first.DisplayName);
+        }
+        catch (Exception ex)
+        {
+            _hasError = true;
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task GetCurrentLocation()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var position = await JsRuntime.InvokeAsync<GeolocationPosition>("getCurrentPosition");
+            var reverseResponse = await Http.GetFromJsonAsync<ReverseGeocodeResponse>(
+                $"https://nominatim.openstreetmap.org/reverse?format=json&lat={position.Coords.Latitude}&lon={position.Coords.Longitude}");
+
+            var displayName = reverseResponse?.DisplayName ?? $"{position.Coords.Latitude:F2}, {position.Coords.Longitude:F2}";
+            await LoadWeatherData(position.Coords.Latitude, position.Coords.Longitude, displayName);
+        }
+        catch
+        {
+            _hasError = true;
+            _errorMessage = "Location access denied";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task LoadWeatherData(double lat, double lon, string displayName)
+    {
+        try
+        {
+            _weatherResponse = await Http.GetFromJsonAsync<WeatherResponse>(
+                $"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,weather_code,wind_speed_10m,precipitation&hourly=temperature_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto");
+
+            if (_weatherResponse != null)
+            {
+                _currentWeather = new CurrentWeather
+                {
+                    Temperature = _weatherResponse.Current.Temperature2m,
+                    WeatherCode = _weatherResponse.Current.WeatherCode,
+                    WindSpeed = _weatherResponse.Current.WindSpeed10m,
+                    Precipitation = _weatherResponse.Current.Precipitation
+                };
+
+                _dailyForecast = _weatherResponse.Daily.Time
+                    .Select((t, i) => new DailyForecast
+                    {
+                        Date = DateTime.Parse(t),
+                        WeatherCode = _weatherResponse.Daily.WeatherCode[i],
+                        MaxTemp = _weatherResponse.Daily.Temperature2mMax[i],
+                        MinTemp = _weatherResponse.Daily.Temperature2mMin[i]
+                    }).ToList();
+
+                _locationName = displayName;
+                await RenderChart();
+            }
+
+            _hasError = false;
+        }
+        catch(Exception exception)
+        {
+            _hasError = true;
+            _errorMessage = exception.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+    private async Task InitializeChart(HourlyData hourly)
+    {
+        var labels = hourly.Time.Take(24).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();
+        var data = hourly.Temperature2m.Take(24).ToArray();
+        await JsRuntime.InvokeVoidAsync("initializeChart", new { Labels = labels, Data = data });
+    }
+
+    private MarkupString GetWeatherIcon(int code)
+    {
+        var icons = new Dictionary<int, string>
+        {
+            [0] = "fas fa-sun",
+            [1] = "fas fa-cloud-sun",
+            [2] = "fas fa-cloud",
+            [3] = "fas fa-cloud",
+            [45] = "fas fa-smog",
+            [48] = "fas fa-smog",
+            [51] = "fas fa-cloud-rain",
+            [53] = "fas fa-cloud-rain",
+            [55] = "fas fa-cloud-rain",
+            [61] = "fas fa-cloud-showers-heavy",
+            [63] = "fas fa-cloud-showers-heavy",
+            [65] = "fas fa-cloud-showers-heavy",
+            [71] = "fas fa-snowflake",
+            [73] = "fas fa-snowflake",
+            [75] = "fas fa-snowflake",
+            [77] = "fas fa-snowflake",
+            [80] = "fas fa-cloud-showers-heavy",
+            [81] = "fas fa-cloud-showers-heavy",
+            [82] = "fas fa-cloud-showers-heavy",
+            [85] = "fas fa-snowflake",
+            [86] = "fas fa-snowflake",
+            [95] = "fas fa-bolt",
+            [96] = "fas fa-bolt",
+            [99] = "fas fa-bolt"
+        };
+
+        return new MarkupString($"<i class=\"{icons.GetValueOrDefault(code, "fas fa-question")}\"></i>");
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+    }
+}
