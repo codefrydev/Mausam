@@ -16,7 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Include="wwwroot\WeatherComponent.js" />
+      <None Include="wwwroot\weather.js" />
       <None Include="wwwroot\WeatherComponent.css" />
     </ItemGroup>
 
