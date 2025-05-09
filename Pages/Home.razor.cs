@@ -9,11 +9,11 @@ namespace Mausam.Pages;
 public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime jsRuntime)
     : IDisposable
 {
-    private string _searchQuery =string.Empty;
+    private string _searchQuery = string.Empty;
     private bool _showSuggestions;
     private List<LocationSuggestion> _suggestions = [];
 
-    
+
     private bool _isLoading;
     private bool _hasError;
     private string _errorMessage = "";
@@ -21,23 +21,27 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
     private WeatherResponse? _weatherResponse;
     private CurrentWeather? _currentWeather;
     private List<DailyForecast> _dailyForecast = [];
-    private string _locationName = ""; 
-    private readonly Timer _debounceTimer = new Timer(300) ;
+    private string _locationName = "";
+    private readonly Timer _debounceTimer = new(300);
+
     protected override void OnInitialized()
-    { 
+    {
         _debounceTimer.Elapsed += async (sender, e) => await FetchSuggestions();
         _debounceTimer.AutoReset = false;
-    }  
+    }
+
     private async void HandleSearchInput(ChangeEventArgs e)
     {
-        _searchQuery = e.Value?.ToString()??string.Empty;
+        _searchQuery = e.Value?.ToString() ?? string.Empty;
         _debounceTimer.Stop();
         _debounceTimer.Start();
     }
+
     private async Task RenderChart()
     {
         await InitializeChart(_weatherResponse.Hourly);
     }
+
     private async Task FetchSuggestions()
     {
         if (string.IsNullOrWhiteSpace(_searchQuery))
@@ -48,7 +52,7 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
 
         try
         {
-            var response = await nominatim.SearchWithName(_searchQuery); 
+            var response = await nominatim.SearchWithName(_searchQuery);
             _suggestions = response;
             _showSuggestions = true;
             await InvokeAsync(StateHasChanged);
@@ -69,14 +73,14 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
     private async Task SearchByCity()
     {
         if (string.IsNullOrWhiteSpace(_searchQuery)) return;
-        
+
         _isLoading = true;
         _hasError = false;
         StateHasChanged();
 
         try
         {
-            var response = await nominatim.SearchWithName(_searchQuery); 
+            var response = await nominatim.SearchWithName(_searchQuery);
 
             if (response?.Count == 0) throw new Exception("City not found");
             var first = response.First();
@@ -102,9 +106,10 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
         try
         {
             var position = await jsRuntime.InvokeAsync<GeolocationPosition>("getCurrentPosition");
-            var reverseResponse = await nominatim.ReverseGeocode(position); 
+            var reverseResponse = await nominatim.ReverseGeocode(position);
 
-            var displayName = reverseResponse?.DisplayName ?? $"{position.Coords.Latitude:F2}, {position.Coords.Longitude:F2}";
+            var displayName = reverseResponse?.DisplayName ??
+                              $"{position.Coords.Latitude:F2}, {position.Coords.Longitude:F2}";
             await LoadWeatherData(position.Coords.Latitude, position.Coords.Longitude, displayName);
         }
         catch
@@ -148,7 +153,7 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
 
             _hasError = false;
         }
-        catch(Exception exception)
+        catch (Exception exception)
         {
             _hasError = true;
             _errorMessage = exception.Message;
@@ -159,6 +164,7 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
             StateHasChanged();
         }
     }
+
     private async Task InitializeChart(HourlyData hourly)
     {
         var labels = hourly.Time.Take(24).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();

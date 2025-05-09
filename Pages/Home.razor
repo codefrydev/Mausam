@@ -6,7 +6,7 @@
     <h1>Mausam Sphere</h1>
     <div class="search-box">
         <div class="suggestions-container">
-            <input type="text" @bind="_searchQuery" @oninput="HandleSearchInput" placeholder="Enter city name..." />
+            <input type="text" @bind="_searchQuery" @oninput="HandleSearchInput" placeholder="Enter city name..."/>
             @if (_showSuggestions)
             {
                 <div class="suggestions-list">
@@ -23,7 +23,7 @@
             <i class="fas fa-search"></i> Search
         </button>
     </div>
-    
+
     <div class="button-group">
         <button class="location-btn" @onclick="GetCurrentLocation">
             <i class="fas fa-location-dot"></i> Current Location
@@ -72,5 +72,5 @@
                 }
             </div>
         }
-    </div> 
+    </div>
 </div>

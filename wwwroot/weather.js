@@ -15,7 +15,7 @@ window.getCurrentPosition = () => {
 
 // Chart initialization
 window.initializeChart = (data) => {
-    const canvas = document.getElementById('temperatureChart'); 
+    const canvas = document.getElementById('temperatureChart');
     const existing = Chart.getChart(canvas);
     if (existing) {
         existing.destroy();
@@ -35,10 +35,10 @@ window.initializeChart = (data) => {
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: {legend: {display: false}},
             scales: {
-                x: { ticks: { color: 'white' } },
-                y: { ticks: { color: 'white' } }
+                x: {ticks: {color: 'white'}},
+                y: {ticks: {color: 'white'}}
             }
         }
     });
