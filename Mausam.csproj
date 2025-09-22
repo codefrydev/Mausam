@@ -11,6 +11,7 @@
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
         <BlazorWebAssemblyPreserveCollationData>true</BlazorWebAssemblyPreserveCollationData>
         <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+        <BlazorWebAssemblyEnableLinking>true</BlazorWebAssemblyEnableLinking>
     </PropertyGroup>
 
     <ItemGroup>

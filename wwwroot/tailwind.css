@@ -56,6 +56,9 @@
 .max-w-md { max-width: 28rem; }
 .max-h-80 { max-height: 20rem; }
 .min-w-0 { min-width: 0; }
+.min-w-max { min-width: max-content; }
+.min-w-\[60px\] { min-width: 60px; }
+.min-w-\[80px\] { min-width: 80px; }
 
 /* Positioning */
 .inset-y-0 { top: 0; bottom: 0; }
@@ -166,6 +169,16 @@
 /* Responsive */
 @media (min-width: 640px) {
   .sm\:inline { display: inline; }
+  .sm\:flex-row { flex-direction: row; }
+  .sm\:min-w-\[80px\] { min-width: 80px; }
+}
+
+/* Mobile-first responsive utilities */
+.flex-col { flex-direction: column; }
+.flex-row { flex-direction: row; }
+
+@media (min-width: 640px) {
+  .sm\:flex-col { flex-direction: column; }
   .sm\:flex-row { flex-direction: row; }
 }
 
