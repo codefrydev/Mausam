@@ -9,6 +9,8 @@
         <DebugType>none</DebugType>
         <DebugSymbols>false</DebugSymbols>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <BlazorWebAssemblyPreserveCollationData>true</BlazorWebAssemblyPreserveCollationData>
+        <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
     </PropertyGroup>
 
     <ItemGroup>

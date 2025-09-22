@@ -39,7 +39,7 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationS
         await LoadWeatherData(51.5074, -0.1278, "London, UK");
     }
 
-    private async Task HandleSearchInput(string searchQuery)
+    private void HandleSearchInput(string searchQuery)
     {
         _searchQuery = searchQuery;
         _debounceTimer.Stop();
@@ -50,14 +50,37 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationS
     {
         // Ensure the DOM is updated before initializing the charts
         StateHasChanged();
-        await Task.Delay(100); // Small delay to ensure DOM is rendered
+        await Task.Delay(200); // Increased delay to ensure DOM is fully rendered
         
         if (_weatherResponse?.Hourly != null)
         {
-            await InitializeTemperatureChart(_weatherResponse.Hourly);
-            await InitializePrecipitationChart(_weatherResponse.Hourly);
-            await InitializeWindChart(_weatherResponse.Hourly);
-            await InitializeHumidityChart(_weatherResponse.Hourly);
+            try
+            {
+                // Wait for Chart.js to be loaded
+                await jsRuntime.InvokeVoidAsync("waitForChartJs");
+                
+                // Check if Chart.js is loaded
+                var chartJsLoaded = await jsRuntime.InvokeAsync<bool>("eval", "typeof Chart !== 'undefined'");
+                
+                if (chartJsLoaded)
+                {
+                    Console.WriteLine("Chart.js loaded, initializing charts...");
+                    await InitializeTemperatureChart(_weatherResponse.Hourly);
+                    await InitializePrecipitationChart(_weatherResponse.Hourly);
+                    await InitializeWindChart(_weatherResponse.Hourly);
+                    await InitializeHumidityChart(_weatherResponse.Hourly);
+                    Console.WriteLine("All charts initialized successfully");
+                }
+                else
+                {
+                    Console.WriteLine("Chart.js failed to load after waiting");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in RenderCharts: {ex.Message}");
+                await jsRuntime.InvokeVoidAsync("console.error", $"RenderCharts error: {ex.Message}");
+            }
         }
     }
 
@@ -240,16 +263,23 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationS
     {
         try
         {
-            if (hourly?.Time == null || hourly?.Temperature2m == null) return;
+            if (hourly?.Time == null || hourly?.Temperature2m == null) 
+            {
+                Console.WriteLine("Temperature chart: Missing hourly data");
+                return;
+            }
 
             var labels = hourly.Time.Take(24).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();
             var data = hourly.Temperature2m.Take(24).ToArray();
             
+            Console.WriteLine($"Temperature chart: Initializing with {labels.Length} data points");
             await jsRuntime.InvokeVoidAsync("initializeTemperatureChart", new { Labels = labels, Data = data });
+            Console.WriteLine("Temperature chart: Initialized successfully");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error initializing temperature chart: {ex.Message}");
+            await jsRuntime.InvokeVoidAsync("console.error", $"Temperature chart error: {ex.Message}");
         }
     }
 
@@ -257,16 +287,23 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationS
     {
         try
         {
-            if (hourly?.Time == null || hourly?.Precipitation == null) return;
+            if (hourly?.Time == null || hourly?.Precipitation == null) 
+            {
+                Console.WriteLine("Precipitation chart: Missing hourly data");
+                return;
+            }
 
             var labels = hourly.Time.Take(24).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();
             var data = hourly.Precipitation.Take(24).ToArray();
             
+            Console.WriteLine($"Precipitation chart: Initializing with {labels.Length} data points");
             await jsRuntime.InvokeVoidAsync("initializePrecipitationChart", new { Labels = labels, Data = data });
+            Console.WriteLine("Precipitation chart: Initialized successfully");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error initializing precipitation chart: {ex.Message}");
+            await jsRuntime.InvokeVoidAsync("console.error", $"Precipitation chart error: {ex.Message}");
         }
     }
 
@@ -274,16 +311,23 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationS
     {
         try
         {
-            if (hourly?.Time == null || hourly?.WindSpeed10m == null) return;
+            if (hourly?.Time == null || hourly?.WindSpeed10m == null) 
+            {
+                Console.WriteLine("Wind chart: Missing hourly data");
+                return;
+            }
 
             var labels = hourly.Time.Take(8).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();
             var data = hourly.WindSpeed10m.Take(8).ToArray();
             
+            Console.WriteLine($"Wind chart: Initializing with {labels.Length} data points");
             await jsRuntime.InvokeVoidAsync("initializeWindChart", new { Labels = labels, Data = data });
+            Console.WriteLine("Wind chart: Initialized successfully");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error initializing wind chart: {ex.Message}");
+            await jsRuntime.InvokeVoidAsync("console.error", $"Wind chart error: {ex.Message}");
         }
     }
 
@@ -291,15 +335,22 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationS
     {
         try
         {
-            if (hourly?.RelativeHumidity2m == null) return;
+            if (hourly?.RelativeHumidity2m == null) 
+            {
+                Console.WriteLine("Humidity chart: Missing hourly data");
+                return;
+            }
 
             var currentHumidity = hourly.RelativeHumidity2m.FirstOrDefault();
             
+            Console.WriteLine($"Humidity chart: Initializing with humidity value: {currentHumidity}");
             await jsRuntime.InvokeVoidAsync("initializeHumidityChart", new { Humidity = currentHumidity });
+            Console.WriteLine("Humidity chart: Initialized successfully");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error initializing humidity chart: {ex.Message}");
+            await jsRuntime.InvokeVoidAsync("console.error", $"Humidity chart error: {ex.Message}");
         }
     }
 

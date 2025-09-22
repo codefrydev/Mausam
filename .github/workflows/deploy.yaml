@@ -19,10 +19,20 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Publish .NET Core Project
-        run: dotnet publish Mausam.csproj -c Release -o release --nologo
+        run: |
+          dotnet publish Mausam.csproj -c Release -o release --nologo --self-contained false
+          echo "Publish completed. Checking output:"
+          ls -la release/
+          ls -la release/wwwroot/
 
       - name: Change base-tag in index.html from / to Mausam
-        run: sed -i 's|<base href="/" />|<base href="/Mausam/" />|g' release/wwwroot/index.html
+        run: |
+          # Add base tag if it doesn't exist, or update it
+          if grep -q '<base href=' release/wwwroot/index.html; then
+            sed -i 's|<base href="/" />|<base href="/Mausam/" />|g' release/wwwroot/index.html
+          else
+            sed -i 's|<head>|<head>\n    <base href="/Mausam/" />|g' release/wwwroot/index.html
+          fi
 
       - name: Update Blazor script references to use hashed files
         run: |
@@ -35,13 +45,61 @@ jobs:
           
           # Also update any preload links
           sed -i "s|_framework/blazor.webassembly.js|_framework/$BLAZOR_FILENAME|g" release/wwwroot/index.html
+          
+          # Ensure _framework directory is properly included
+          echo "Checking _framework directory contents:"
+          ls -la release/wwwroot/_framework/
+          
+          # Verify blazor files exist
+          if [ ! -f "release/wwwroot/_framework/$BLAZOR_FILENAME" ]; then
+            echo "Error: Blazor file not found: $BLAZOR_FILENAME"
+            exit 1
+          fi
 
-      - name: Copy index.html to 404.html
-        run: cp release/wwwroot/index.html release/wwwroot/404.html
+      - name: Create 404.html for SPA routing
+        run: |
+          # Copy index.html to 404.html for SPA routing
+          cp release/wwwroot/index.html release/wwwroot/404.html
+          # Add a script to handle SPA routing in 404.html
+          cat >> release/wwwroot/404.html << 'EOF'
+          <script>
+            // Handle SPA routing for GitHub Pages
+            if (window.location.pathname !== '/Mausam/' && !window.location.pathname.startsWith('/Mausam/_framework/')) {
+              window.location.replace('/Mausam/');
+            }
+          </script>
+          EOF
       
       # (Allow files and folders starting with an underscore)
       - name: Add .nojekyll file
         run: touch release/wwwroot/.nojekyll
+
+      - name: Ensure _framework directory permissions
+        run: |
+          # Ensure _framework directory has proper permissions
+          chmod -R 755 release/wwwroot/_framework/
+          # Verify _framework directory exists and has content
+          if [ ! -d "release/wwwroot/_framework" ]; then
+            echo "Error: _framework directory not found!"
+            exit 1
+          fi
+          # Count files in _framework directory
+          FRAMEWORK_COUNT=$(find release/wwwroot/_framework -type f | wc -l)
+          echo "Found $FRAMEWORK_COUNT files in _framework directory"
+          if [ $FRAMEWORK_COUNT -lt 10 ]; then
+            echo "Warning: Very few files in _framework directory"
+          fi
+
+      - name: Verify deployment files
+        run: |
+          echo "Checking deployment directory structure:"
+          ls -la release/wwwroot/
+          echo "Checking _framework directory:"
+          ls -la release/wwwroot/_framework/ | head -20
+          echo "Checking for .nojekyll file:"
+          ls -la release/wwwroot/.nojekyll
+          echo "Checking index.html content:"
+          grep -n "_framework" release/wwwroot/index.html
 
       - name: Commit wwwroot to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@4.1.5
@@ -49,3 +107,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH: gh-pages
           FOLDER: release/wwwroot
+          CLEAN: true
