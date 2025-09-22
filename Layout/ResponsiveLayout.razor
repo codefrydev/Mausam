@@ -1,0 +1,113 @@
+@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+@using Mausam.Services
+
+<div class="responsive-layout">
+    <div class="layout-container">
+        <!-- Mobile Layout -->
+        <div class="mobile-layout d-block d-md-none">
+            <div class="mobile-header">
+                <div class="mobile-nav">
+                    <button class="mobile-menu-btn" @onclick="ToggleMobileMenu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 class="mobile-title">Mausam</h1>
+                    <button class="mobile-location-btn" @onclick="GetCurrentLocation">
+                        <i class="fas fa-location-dot"></i>
+                    </button>
+                </div>
+                @if (_showMobileMenu)
+                {
+                    <div class="mobile-menu">
+                        <button class="mobile-menu-item" @onclick="GetCurrentLocation">
+                            <i class="fas fa-location-dot"></i>
+                            <span>Current Location</span>
+                        </button>
+                        <button class="mobile-menu-item">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+                }
+            </div>
+            <div class="mobile-content">
+                @ChildContent
+            </div>
+        </div>
+
+        <!-- Tablet Layout -->
+        <div class="tablet-layout d-none d-md-block d-lg-none">
+            <div class="tablet-header">
+                <div class="tablet-nav">
+                    <h1 class="tablet-title">Mausam</h1>
+                    <div class="tablet-actions">
+                        <button class="tablet-btn" @onclick="GetCurrentLocation">
+                            <i class="fas fa-location-dot"></i>
+                            <span>Current Location</span>
+                        </button>
+                        <button class="tablet-btn">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="tablet-content">
+                @ChildContent
+            </div>
+        </div>
+
+        <!-- Desktop Layout -->
+        <div class="desktop-layout d-none d-lg-block">
+            <div class="desktop-header">
+                <div class="desktop-nav">
+                    <div class="desktop-brand">
+                        <h1 class="desktop-title">Mausam</h1>
+                        <p class="desktop-subtitle">Advanced Weather Dashboard</p>
+                    </div>
+                    <div class="desktop-actions">
+                        <button class="desktop-btn primary" @onclick="GetCurrentLocation">
+                            <i class="fas fa-location-dot"></i>
+                            <span>Current Location</span>
+                        </button>
+                        <button class="desktop-btn secondary">
+                            <i class="fas fa-cog"></i>
+                            <span>Settings</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="desktop-content">
+                @ChildContent
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public Func<Task>? OnLocationRequested { get; set; }
+    
+    private bool _showMobileMenu = false;
+
+    private async Task ToggleMobileMenu()
+    {
+        _showMobileMenu = !_showMobileMenu;
+    }
+
+    private async Task GetCurrentLocation()
+    {
+        _showMobileMenu = false; // Close mobile menu
+        await JSRuntime.InvokeVoidAsync("console.log", "[Mausam] ResponsiveLayout: Location button clicked");
+        
+        if (OnLocationRequested != null)
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "[Mausam] ResponsiveLayout: Calling OnLocationRequested");
+            await OnLocationRequested();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("console.log", "[Mausam] ResponsiveLayout: OnLocationRequested is null");
+        }
+    }
+}

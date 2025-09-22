@@ -1,0 +1,44 @@
+@using Mausam.Models
+
+<div class="rounded-2xl bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-800 mb-4">Atmospheric Pressure</h3>
+    @if (CurrentWeather != null && CurrentWeather.SurfacePressure != null)
+    {
+        <div class="text-center">
+            <div class="text-4xl font-bold text-slate-900">@(CurrentWeather.SurfacePressure) hPa</div>
+            <div class="text-sm text-slate-600 mt-1">@GetPressureLevel(CurrentWeather.SurfacePressure.Value)</div>
+        </div>
+        <div class="mt-4 text-xs text-slate-500 text-center">
+            @GetPressureImpact(CurrentWeather.SurfacePressure.Value)
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-8 text-slate-500">
+            <i class="fas fa-compress-arrows-alt text-4xl mb-2"></i>
+            <div>Pressure data not available</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public CurrentWeather? CurrentWeather { get; set; }
+
+    private string GetPressureLevel(double pressure)
+    {
+        if (pressure < 1000) return "Very Low";
+        if (pressure < 1013) return "Low";
+        if (pressure < 1020) return "Normal";
+        if (pressure < 1030) return "High";
+        return "Very High";
+    }
+
+    private string GetPressureImpact(double pressure)
+    {
+        if (pressure < 1000) return "Stormy conditions likely";
+        if (pressure < 1013) return "Unsettled weather";
+        if (pressure < 1020) return "Stable conditions";
+        if (pressure < 1030) return "Clear and dry";
+        return "Very stable conditions";
+    }
+}

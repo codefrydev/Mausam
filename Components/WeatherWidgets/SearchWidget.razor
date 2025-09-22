@@ -1,0 +1,57 @@
+@using Mausam.Models
+
+<div class="relative mb-6">
+    <div class="flex gap-2">
+        <div class="relative flex-1">
+            <input class="w-full rounded-lg border border-slate-300 bg-white/80 backdrop-blur px-4 py-2.5 pr-10 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                   type="text" 
+                   @bind="SearchQuery" 
+                   @oninput="HandleSearchInput" 
+                   placeholder="Search city or place..." />
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
+                <i class="fas fa-magnifying-glass"></i>
+            </div>
+            @if (ShowSuggestions)
+            {
+                <div class="absolute z-20 mt-1 w-full max-h-64 overflow-auto rounded-md border border-slate-200 bg-white shadow-lg">
+                    @foreach (var suggestion in Suggestions)
+                    {
+                        <button class="w-full text-left px-3 py-2 hover:bg-slate-50" @onclick="() => SelectSuggestion(suggestion)">
+                            @suggestion.DisplayName
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+        <button class="inline-flex items-center gap-2 px-4 py-2.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-slate-700" @onclick="SearchByCity">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string SearchQuery { get; set; } = string.Empty;
+    [Parameter] public bool ShowSuggestions { get; set; }
+    [Parameter] public List<LocationSuggestion> Suggestions { get; set; } = new();
+    [Parameter] public EventCallback<string> OnSearchQueryChanged { get; set; }
+    [Parameter] public EventCallback<LocationSuggestion> OnSuggestionSelected { get; set; }
+    [Parameter] public EventCallback OnSearchClicked { get; set; }
+
+    private async void HandleSearchInput(ChangeEventArgs e)
+    {
+        SearchQuery = e.Value?.ToString() ?? string.Empty;
+        await OnSearchQueryChanged.InvokeAsync(SearchQuery);
+    }
+
+    private async Task SelectSuggestion(LocationSuggestion suggestion)
+    {
+        SearchQuery = suggestion.DisplayName;
+        await OnSuggestionSelected.InvokeAsync(suggestion);
+    }
+
+    private async Task SearchByCity()
+    {
+        await OnSearchClicked.InvokeAsync();
+    }
+}

@@ -6,7 +6,7 @@ using Timer = System.Timers.Timer;
 
 namespace Mausam.Pages;
 
-public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime jsRuntime)
+public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationService locationService, IJSRuntime jsRuntime)
     : IDisposable
 {
     private string _searchQuery = string.Empty;
@@ -24,22 +24,40 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
     private string _locationName = "";
     private readonly Timer _debounceTimer = new(300);
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         _debounceTimer.Elapsed += async (sender, e) => await FetchSuggestions();
         _debounceTimer.AutoReset = false;
+        
+        // Subscribe to location service events
+        locationService.LocationRequested += OnLocationRequested;
+        _ = jsRuntime.InvokeVoidAsync("console.log", "[Mausam] Event subscription completed");
+        _ = jsRuntime.InvokeVoidAsync("console.log", $"[Mausam] LocationService instance: {locationService.GetHashCode()}");
+        
+        // Load default weather data for a popular location (London)
+        await LoadWeatherData(51.5074, -0.1278, "London, UK");
     }
 
-    private async void HandleSearchInput(ChangeEventArgs e)
+    private async Task HandleSearchInput(string searchQuery)
     {
-        _searchQuery = e.Value?.ToString() ?? string.Empty;
+        _searchQuery = searchQuery;
         _debounceTimer.Stop();
         _debounceTimer.Start();
     }
 
-    private async Task RenderChart()
+    private async Task RenderCharts()
     {
-        await InitializeChart(_weatherResponse.Hourly);
+        // Ensure the DOM is updated before initializing the charts
+        StateHasChanged();
+        await Task.Delay(100); // Small delay to ensure DOM is rendered
+        
+        if (_weatherResponse?.Hourly != null)
+        {
+            await InitializeTemperatureChart(_weatherResponse.Hourly);
+            await InitializePrecipitationChart(_weatherResponse.Hourly);
+            await InitializeWindChart(_weatherResponse.Hourly);
+            await InitializeHumidityChart(_weatherResponse.Hourly);
+        }
     }
 
     private async Task FetchSuggestions()
@@ -83,7 +101,7 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
             var response = await nominatim.SearchWithName(_searchQuery);
 
             if (response?.Count == 0) throw new Exception("City not found");
-            var first = response.First();
+            var first = response?.First() ?? throw new Exception("No location data available");
             await LoadWeatherData(first.Lat, first.Lon, first.DisplayName);
         }
         catch (Exception ex)
@@ -96,6 +114,32 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
             _isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private void OnLocationRequested(LocationResult result)
+    {
+        Console.WriteLine($"Location requested: Success={result.Success}, Lat={result.Latitude}, Lon={result.Longitude}, Name={result.DisplayName}");
+        _ = jsRuntime.InvokeVoidAsync("console.log", $"[Mausam] Location requested: success={result.Success}, lat={result.Latitude}, lon={result.Longitude}, name={result.DisplayName}");
+        
+        _ = InvokeAsync(async () =>
+        {
+            if (result.Success)
+            {
+                _isLoading = true;
+                _hasError = false;
+                StateHasChanged();
+                _ = jsRuntime.InvokeVoidAsync("console.log", $"[Mausam] Loading weather for {result.DisplayName} ({result.Latitude}, {result.Longitude})");
+                await LoadWeatherData(result.Latitude, result.Longitude, result.DisplayName);
+                _ = jsRuntime.InvokeVoidAsync("console.log", $"[Mausam] Weather loaded for {result.DisplayName}");
+            }
+            else
+            {
+                _hasError = true;
+                _errorMessage = result.ErrorMessage;
+                _ = jsRuntime.InvokeVoidAsync("console.error", $"[Mausam] Location error: {_errorMessage}");
+                StateHasChanged();
+            }
+        });
     }
 
     private async Task GetCurrentLocation()
@@ -125,9 +169,12 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
 
     private async Task LoadWeatherData(double lat, double lon, string displayName)
     {
+        Console.WriteLine($"Loading weather data for: {displayName} ({lat}, {lon})");
         try
         {
             _weatherResponse = await openMeteo.GetWeather(lat, lon);
+            var airQualityData = await openMeteo.GetAirQuality(lat, lon);
+            
             if (_weatherResponse != null)
             {
                 _currentWeather = new CurrentWeather
@@ -135,7 +182,24 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
                     Temperature = _weatherResponse.Current.Temperature2m,
                     WeatherCode = _weatherResponse.Current.WeatherCode,
                     WindSpeed = _weatherResponse.Current.WindSpeed10m,
-                    Precipitation = _weatherResponse.Current.Precipitation
+                    Precipitation = _weatherResponse.Current.Precipitation,
+                    ApparentTemperature = _weatherResponse.Current.ApparentTemperature,
+                    Visibility = _weatherResponse.Current.Visibility,
+                    RelativeHumidity = _weatherResponse.Current.RelativeHumidity2m,
+                    SurfacePressure = _weatherResponse.Current.SurfacePressure,
+                    WindDirection = _weatherResponse.Current.WindDirection10m,
+                    Rain = _weatherResponse.Current.Rain,
+                    UvIndex = _weatherResponse.Current.UvIndex,
+                    AirQuality = airQualityData != null ? new AirQuality
+                    {
+                        Pm25 = airQualityData.Pm25,
+                        Pm10 = airQualityData.Pm10,
+                        Ozone = airQualityData.Ozone,
+                        NitrogenDioxide = airQualityData.NitrogenDioxide,
+                        EuropeanAqi = airQualityData.EuropeanAqi,
+                        CarbonMonoxide = airQualityData.CarbonMonoxide,
+                        SulphurDioxide = airQualityData.SulphurDioxide
+                    } : null
                 };
 
                 _dailyForecast = _weatherResponse.Daily.Time
@@ -144,11 +208,16 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
                         Date = DateTime.Parse(t),
                         WeatherCode = _weatherResponse.Daily.WeatherCode[i],
                         MaxTemp = _weatherResponse.Daily.Temperature2mMax[i],
-                        MinTemp = _weatherResponse.Daily.Temperature2mMin[i]
+                        MinTemp = _weatherResponse.Daily.Temperature2mMin[i],
+                        PrecipitationProbability = _weatherResponse.Daily.PrecipitationProbabilityMax?.ElementAtOrDefault(i),
+                        PrecipitationSum = _weatherResponse.Daily.PrecipitationSum?.ElementAtOrDefault(i),
+                        MaxWindSpeed = _weatherResponse.Daily.WindSpeed10mMax?.ElementAtOrDefault(i),
+                        UvIndexMax = _weatherResponse.Daily.UvIndexMax?.ElementAtOrDefault(i)
                     }).ToList();
 
                 _locationName = displayName;
-                await RenderChart();
+                StateHasChanged(); // Ensure UI updates with new location name
+                await RenderCharts();
             }
 
             _hasError = false;
@@ -165,48 +234,77 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, IJSRuntime
         }
     }
 
-    private async Task InitializeChart(HourlyData hourly)
+    private async Task InitializeTemperatureChart(HourlyData hourly)
     {
-        var labels = hourly.Time.Take(24).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();
-        var data = hourly.Temperature2m.Take(24).ToArray();
-        await jsRuntime.InvokeVoidAsync("initializeChart", new { Labels = labels, Data = data });
-    }
-
-    private MarkupString GetWeatherIcon(int code)
-    {
-        var icons = new Dictionary<int, string>
+        try
         {
-            [0] = "fas fa-sun",
-            [1] = "fas fa-cloud-sun",
-            [2] = "fas fa-cloud",
-            [3] = "fas fa-cloud",
-            [45] = "fas fa-smog",
-            [48] = "fas fa-smog",
-            [51] = "fas fa-cloud-rain",
-            [53] = "fas fa-cloud-rain",
-            [55] = "fas fa-cloud-rain",
-            [61] = "fas fa-cloud-showers-heavy",
-            [63] = "fas fa-cloud-showers-heavy",
-            [65] = "fas fa-cloud-showers-heavy",
-            [71] = "fas fa-snowflake",
-            [73] = "fas fa-snowflake",
-            [75] = "fas fa-snowflake",
-            [77] = "fas fa-snowflake",
-            [80] = "fas fa-cloud-showers-heavy",
-            [81] = "fas fa-cloud-showers-heavy",
-            [82] = "fas fa-cloud-showers-heavy",
-            [85] = "fas fa-snowflake",
-            [86] = "fas fa-snowflake",
-            [95] = "fas fa-bolt",
-            [96] = "fas fa-bolt",
-            [99] = "fas fa-bolt"
-        };
+            if (hourly?.Time == null || hourly?.Temperature2m == null) return;
 
-        return new MarkupString($"<i class=\"{icons.GetValueOrDefault(code, "fas fa-question")}\"></i>");
+            var labels = hourly.Time.Take(24).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();
+            var data = hourly.Temperature2m.Take(24).ToArray();
+            
+            await jsRuntime.InvokeVoidAsync("initializeTemperatureChart", new { Labels = labels, Data = data });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing temperature chart: {ex.Message}");
+        }
     }
+
+    private async Task InitializePrecipitationChart(HourlyData hourly)
+    {
+        try
+        {
+            if (hourly?.Time == null || hourly?.Precipitation == null) return;
+
+            var labels = hourly.Time.Take(24).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();
+            var data = hourly.Precipitation.Take(24).ToArray();
+            
+            await jsRuntime.InvokeVoidAsync("initializePrecipitationChart", new { Labels = labels, Data = data });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing precipitation chart: {ex.Message}");
+        }
+    }
+
+    private async Task InitializeWindChart(HourlyData hourly)
+    {
+        try
+        {
+            if (hourly?.Time == null || hourly?.WindSpeed10m == null) return;
+
+            var labels = hourly.Time.Take(8).Select(t => DateTime.Parse(t).ToString("HH:mm")).ToArray();
+            var data = hourly.WindSpeed10m.Take(8).ToArray();
+            
+            await jsRuntime.InvokeVoidAsync("initializeWindChart", new { Labels = labels, Data = data });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing wind chart: {ex.Message}");
+        }
+    }
+
+    private async Task InitializeHumidityChart(HourlyData hourly)
+    {
+        try
+        {
+            if (hourly?.RelativeHumidity2m == null) return;
+
+            var currentHumidity = hourly.RelativeHumidity2m.FirstOrDefault();
+            
+            await jsRuntime.InvokeVoidAsync("initializeHumidityChart", new { Humidity = currentHumidity });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error initializing humidity chart: {ex.Message}");
+        }
+    }
+
 
     public void Dispose()
     {
         _debounceTimer?.Dispose();
+        locationService.LocationRequested -= OnLocationRequested;
     }
 }

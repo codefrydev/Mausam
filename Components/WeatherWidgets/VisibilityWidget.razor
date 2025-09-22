@@ -1,0 +1,79 @@
+@using Mausam.Models
+
+<div class="rounded-2xl bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-800 mb-4">Visibility & Cloud Cover</h3>
+    @if (CurrentWeather != null)
+    {
+        <div class="grid grid-cols-2 gap-4">
+            <div class="rounded-xl bg-slate-50 p-4 text-center">
+                <div class="text-sm text-slate-600 mb-1">Visibility</div>
+                <div class="text-2xl font-semibold text-slate-900">@(CurrentWeather.Visibility ?? 0) km</div>
+                <div class="text-xs text-slate-500 mt-1">@GetVisibilityDescription(CurrentWeather.Visibility)</div>
+            </div>
+            <div class="rounded-xl bg-slate-50 p-4 text-center">
+                <div class="text-sm text-slate-600 mb-1">Cloud Cover</div>
+                <div class="text-2xl font-semibold text-slate-900">@GetCloudCover()%</div>
+                <div class="text-xs text-slate-500 mt-1">@GetCloudDescription()</div>
+            </div>
+        </div>
+        <div class="mt-4 text-xs text-slate-500 text-center">
+            <i class="fas fa-info-circle mr-1"></i> @GetActivityRecommendation(CurrentWeather.Visibility)
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-8 text-slate-500">
+            <i class="fas fa-eye text-4xl mb-2"></i>
+            <div>Visibility data not available</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public CurrentWeather? CurrentWeather { get; set; }
+
+    private string GetVisibilityDescription(double? visibility)
+    {
+        if (visibility < 1) return "Very poor";
+        if (visibility < 4) return "Poor";
+        if (visibility < 10) return "Moderate";
+        if (visibility < 20) return "Good";
+        return "Excellent";
+    }
+
+    private int GetCloudCover()
+    {
+        if (CurrentWeather?.WeatherCode == null) return 50;
+
+        switch (CurrentWeather.WeatherCode)
+        {
+            case 0: return 0;    // Clear sky
+            case 1: return 25;   // Mainly clear
+            case 2: return 50;   // Partly cloudy
+            case 3: return 100;  // Overcast
+            default: return 75;
+        }
+    }
+
+    private string GetCloudDescription()
+    {
+        if (CurrentWeather?.WeatherCode == null) return "Unknown";
+        
+        switch (CurrentWeather.WeatherCode)
+        {
+            case 0: return "Clear";
+            case 1: return "Few clouds";
+            case 2: return "Scattered";
+            case 3: return "Overcast";
+            default: return "Broken";
+        }
+    }
+
+    private string GetActivityRecommendation(double? visibility)
+    {
+        if (visibility < 1) return "Avoid outdoor activities";
+        if (visibility < 4) return "Use caution outdoors";
+        if (visibility < 10) return "Good for most activities";
+        return "Perfect for all outdoor activities";
+    }
+}

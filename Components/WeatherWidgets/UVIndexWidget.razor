@@ -1,0 +1,90 @@
+@using Mausam.Models
+
+<div class="rounded-2xl bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-800 mb-4">UV Index</h3>
+    @if (CurrentWeather != null && CurrentWeather.UvIndex != null)
+    {
+        <div class="space-y-4">
+            <div class="text-center">
+                <div class="text-4xl font-bold @GetUVColor(CurrentWeather.UvIndex)">@CurrentWeather.UvIndex</div>
+                <div class="text-sm text-slate-600 mt-1">@GetUVLevel(CurrentWeather.UvIndex)</div>
+            </div>
+            
+            <div class="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                <div class="h-full @GetUVBarColor(CurrentWeather.UvIndex)" 
+                     style="width: @(Math.Min(100, ((CurrentWeather.UvIndex ?? 0) / 11.0) * 100))%"></div>
+            </div>
+            
+            <div class="text-xs text-slate-500 text-center">
+                @GetUVAdvice(CurrentWeather.UvIndex)
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-8 text-slate-500">
+            <i class="fas fa-sun text-4xl mb-2"></i>
+            <div>UV Index data not available</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public CurrentWeather? CurrentWeather { get; set; }
+
+    private string GetUVColor(double? uvIndex)
+    {
+        if (uvIndex == null) return "text-slate-400";
+        
+        return uvIndex switch
+        {
+            <= 2 => "text-green-500",
+            <= 5 => "text-yellow-500",
+            <= 7 => "text-orange-500",
+            <= 10 => "text-red-500",
+            _ => "text-purple-500"
+        };
+    }
+
+    private string GetUVBarColor(double? uvIndex)
+    {
+        if (uvIndex == null) return "bg-slate-400";
+        
+        return uvIndex switch
+        {
+            <= 2 => "bg-green-500",
+            <= 5 => "bg-yellow-500",
+            <= 7 => "bg-orange-500",
+            <= 10 => "bg-red-500",
+            _ => "bg-purple-500"
+        };
+    }
+
+    private string GetUVLevel(double? uvIndex)
+    {
+        if (uvIndex == null) return "Unknown";
+        
+        return uvIndex switch
+        {
+            <= 2 => "Low",
+            <= 5 => "Moderate",
+            <= 7 => "High",
+            <= 10 => "Very High",
+            _ => "Extreme"
+        };
+    }
+
+    private string GetUVAdvice(double? uvIndex)
+    {
+        if (uvIndex == null) return "No data available";
+        
+        return uvIndex switch
+        {
+            <= 2 => "No protection needed",
+            <= 5 => "Some protection required",
+            <= 7 => "Protection required",
+            <= 10 => "Extra protection required",
+            _ => "Avoid sun exposure"
+        };
+    }
+}

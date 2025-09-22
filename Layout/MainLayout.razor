@@ -1,2 +1,16 @@
-﻿@inherits LayoutComponentBase
-@Body
+@inherits LayoutComponentBase
+@inject ILocationService LocationService
+@inject IJSRuntime JSRuntime
+@using Mausam.Services
+
+<ResponsiveLayout OnLocationRequested="HandleLocationRequest">
+    @Body
+</ResponsiveLayout>
+
+@code {
+    private async Task HandleLocationRequest()
+    {
+        await JSRuntime.InvokeVoidAsync("console.log", "[Mausam] MainLayout: Location requested");
+        await LocationService.RequestCurrentLocationAsync();
+    }
+}

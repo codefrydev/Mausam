@@ -1,76 +1,162 @@
 ﻿@page "/"
+@using Mausam.Components.WeatherWidgets
 
 @implements IDisposable
 
-<div class="container">
-    <h1>Mausam Sphere</h1>
-    <div class="search-box">
-        <div class="suggestions-container">
-            <input type="text" @bind="_searchQuery" @oninput="HandleSearchInput" placeholder="Enter city name..."/>
-            @if (_showSuggestions)
-            {
-                <div class="suggestions-list">
-                    @foreach (var suggestion in _suggestions)
-                    {
-                        <div class="suggestion-item" @onclick="() => SelectSuggestion(suggestion)">
-                            @suggestion.DisplayName
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-        <button @onclick="SearchByCity">
-            <i class="fas fa-search"></i> Search
-        </button>
-    </div>
+<div class="weather-content">
 
-    <div class="button-group">
-        <button class="location-btn" @onclick="GetCurrentLocation">
-            <i class="fas fa-location-dot"></i> Current Location
-        </button>
-    </div>
+        <SearchWidget SearchQuery="_searchQuery" 
+                      ShowSuggestions="_showSuggestions" 
+                      Suggestions="_suggestions"
+                      OnSearchQueryChanged="HandleSearchInput"
+                      OnSuggestionSelected="SelectSuggestion"
+                      OnSearchClicked="SearchByCity" />
 
-    @if (_isLoading)
-    {
-        <div class="loader"></div>
-    }
-    else if (_hasError)
-    {
-        <div class="error">@_errorMessage</div>
-    }
-    <div class="weather-card">
-        @if (_currentWeather != null)
+        @if (_isLoading)
         {
-            <div class="current-weather">
-                <div>
-                    <h2>@_locationName</h2>
-                    <div class="temp">@_currentWeather.Temperature°C</div>
-                    <div class="weather-icon">@GetWeatherIcon(_currentWeather.WeatherCode)</div>
-                </div>
-                <div>
-                    <p><i class="fas fa-wind"></i> Wind: @_currentWeather.WindSpeed km/h</p>
-                    <p><i class="fas fa-tint"></i> Precipitation: @_currentWeather.Precipitation mm</p>
+            <div class="text-center py-12 rounded-2xl bg-white shadow-sm mt-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <h2 class="text-2xl font-semibold text-slate-700 mb-2">Loading Weather Data...</h2>
+                <p class="text-slate-500 text-lg">Please wait while we fetch the latest weather information.</p>
+            </div>
+        }
+        else if (_hasError)
+        {
+            <div class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>@_errorMessage</span>
                 </div>
             </div>
         }
-
-        <div class="chart-container">
-            <canvas id="temperatureChart"></canvas>
-        </div>
-        @if (_currentWeather != null)
+        else if (_currentWeather != null)
         {
-            <h3>7-Day Forecast</h3>
-            <div class="forecast">
-                @foreach (var day in _dailyForecast)
-                {
-                    <div class="forecast-day">
-                        <div>@day.Date.ToString("ddd")</div>
-                        <div class="weather-icon">@GetWeatherIcon(day.WeatherCode)</div>
-                        <div>@day.MaxTemp°</div>
-                        <div>@day.MinTemp°</div>
+            <!-- Quick Stats Bar -->
+            <div class="responsive-grid mobile-grid tablet-grid desktop-grid-wide mb-6">
+                <div class="rounded-xl bg-white p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-2 text-slate-600 mb-1">
+                        <i class="fas fa-thermometer-half text-blue-500"></i>
+                        <span class="text-xs">Feels Like</span>
                     </div>
-                }
+                    <div class="text-xl font-bold text-slate-900">@(Math.Round(_currentWeather.ApparentTemperature ?? _currentWeather.Temperature, 1))°C</div>
+                </div>
+                <div class="rounded-xl bg-white p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-2 text-slate-600 mb-1">
+                        <i class="fas fa-tint text-blue-500"></i>
+                        <span class="text-xs">Humidity</span>
+                    </div>
+                    <div class="text-xl font-bold text-slate-900">@(Math.Round(_currentWeather.RelativeHumidity ?? 0, 0))%</div>
+                </div>
+                <div class="rounded-xl bg-white p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-2 text-slate-600 mb-1">
+                        <i class="fas fa-wind text-green-500"></i>
+                        <span class="text-xs">Wind</span>
+                    </div>
+                    <div class="text-xl font-bold text-slate-900">@(Math.Round(_currentWeather.WindSpeed, 0)) km/h</div>
+                </div>
+                <div class="rounded-xl bg-white p-4 shadow-sm border border-slate-200">
+                    <div class="flex items-center gap-2 text-slate-600 mb-1">
+                        <i class="fas fa-eye text-indigo-500"></i>
+                        <span class="text-xs">Visibility</span>
+                    </div>
+                    <div class="text-xl font-bold text-slate-900">@(Math.Round(_currentWeather.Visibility ?? 0, 1)) km</div>
+                </div>
+            </div>
+
+            <div class="responsive-grid mobile-grid tablet-grid desktop-grid">
+                <!-- Main Weather Card -->
+                <div class="widget-mobile widget-tablet widget-desktop-wide">
+                    <CurrentWeatherWidget CurrentWeather="_currentWeather" LocationName="_locationName" />
+                </div>
+
+                <!-- UV Index -->
+                <div class="widget-mobile widget-tablet widget-desktop">
+                    <UVIndexWidget CurrentWeather="_currentWeather" />
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="mt-6">
+                <div class="responsive-grid mobile-grid tablet-grid desktop-grid-wide">
+                    <!-- Temperature Chart -->
+                    <div class="widget-mobile widget-tablet widget-desktop-wide weather-card">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Temperature Trend</h3>
+                        <div class="chart-container">
+                            <canvas id="temperatureChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Precipitation Chart -->
+                    <div class="widget-mobile widget-tablet widget-desktop weather-card">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Precipitation</h3>
+                        <div class="chart-container">
+                            <canvas id="precipitationChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Wind Chart -->
+                    <div class="widget-mobile widget-tablet widget-desktop weather-card">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Wind Pattern</h3>
+                        <div class="chart-container">
+                            <canvas id="windChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Humidity Chart -->
+                    <div class="widget-mobile widget-tablet widget-desktop weather-card">
+                        <h3 class="text-lg font-semibold text-slate-800 mb-4">Humidity</h3>
+                        <div class="chart-container">
+                            <canvas id="humidityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hourly Forecast -->
+            <div class="mt-6">
+                <HourlyForecastWidget HourlyData="_weatherResponse?.Hourly" />
+            </div>
+
+                <!-- Additional Widgets Grid -->
+                <div class="responsive-grid mobile-grid tablet-grid desktop-grid-wide mt-6">
+                    <div class="widget-mobile widget-tablet widget-desktop">
+                        <WeatherDetailsWidget CurrentWeather="_currentWeather" />
+                    </div>
+                    <div class="widget-mobile widget-tablet widget-desktop">
+                        <AirQualityWidget CurrentWeather="_currentWeather" />
+                    </div>
+                    <div class="widget-mobile widget-tablet widget-desktop">
+                        <PressureWidget CurrentWeather="_currentWeather" />
+                    </div>
+                    <div class="widget-mobile widget-tablet widget-desktop">
+                        <VisibilityWidget CurrentWeather="_currentWeather" />
+                    </div>
+                </div>
+
+                <!-- Detailed Forecast Widget -->
+                <div class="mt-6">
+                    <DetailedForecastWidget CurrentWeather="_currentWeather" />
+                </div>
+
+            <!-- Daily Forecast -->
+            <div class="mt-6">
+                <DailyForecastWidget DailyForecast="_dailyForecast" />
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-24">
+                <div class="max-w-md mx-auto">
+                    <i class="fas fa-cloud-sun text-8xl text-slate-300 mb-6"></i>
+                    <h2 class="text-2xl font-semibold text-slate-700 mb-2">Welcome to Mausam</h2>
+                    <p class="text-slate-600 mb-6">Search for a city or use your current location to get detailed weather information</p>
+                    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button class="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition" @onclick="GetCurrentLocation">
+                            <i class="fas fa-location-dot"></i>
+                            <span>Use Current Location</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         }
     </div>
-</div>

@@ -10,5 +10,6 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<INominatim, Nominatim>();
-builder.Services.AddScoped<IOpenMeteo, OpenMeteo>();
+builder.Services.AddScoped<IOpenMeteo, OpenMeteoService>();
+builder.Services.AddScoped<ILocationService, LocationService>();
 await builder.Build().RunAsync();

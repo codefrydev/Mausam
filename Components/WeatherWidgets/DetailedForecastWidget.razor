@@ -1,0 +1,72 @@
+@using Mausam.Models
+
+<div class="rounded-2xl bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-800 mb-4">Detailed Forecast</h3>
+    @if (CurrentWeather != null)
+    {
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-600">Temperature</span>
+                <span class="font-semibold text-slate-900">@(CurrentWeather.Temperature)°C</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-600">Feels Like</span>
+                <span class="font-semibold text-slate-900">@(CurrentWeather.ApparentTemperature ?? CurrentWeather.Temperature)°C</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-600">Humidity</span>
+                <span class="font-semibold text-slate-900">@(CurrentWeather.RelativeHumidity ?? 0)%</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-600">Wind Speed</span>
+                <span class="font-semibold text-slate-900">@(CurrentWeather.WindSpeed) km/h</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-600">Precipitation</span>
+                <span class="font-semibold text-slate-900">@(CurrentWeather.Precipitation) mm</span>
+            </div>
+            <div class="flex items-center justify-between">
+                <span class="text-sm text-slate-600">UV Index</span>
+                <span class="font-semibold text-slate-900">@(CurrentWeather.UvIndex ?? 0)</span>
+            </div>
+        </div>
+        <div class="mt-6 text-xs text-slate-500 text-center">
+            <i class="fas fa-lightbulb mr-1"></i> @GetActivityRecommendation(CurrentWeather.Temperature, CurrentWeather.Precipitation, CurrentWeather.WindSpeed)
+        </div>
+    }
+    else
+    {
+        <div class="text-center py-8 text-slate-500">
+            <i class="fas fa-chart-line text-4xl mb-2"></i>
+            <div>Detailed forecast data not available</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public CurrentWeather? CurrentWeather { get; set; }
+
+    private string GetActivityRecommendation(double temp, double precipitation, double windSpeed)
+    {
+        if (precipitation > 0.5)
+        {
+            return "Rainy conditions - best for indoor activities.";
+        }
+        else if (windSpeed > 25)
+        {
+            return "Windy conditions - great for wind sports.";
+        }
+        else if (temp > 30)
+        {
+            return "Hot weather - perfect for water activities.";
+        }
+        else if (temp < 10)
+        {
+            return "Cool weather - ideal for winter activities.";
+        }
+        else
+        {
+            return "Perfect weather for outdoor activities!";
+        }
+    }
+}

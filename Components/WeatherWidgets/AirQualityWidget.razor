@@ -1,0 +1,89 @@
+@using Mausam.Models
+
+<div class="rounded-2xl bg-white p-6 shadow-sm">
+    <h3 class="text-lg font-semibold text-slate-800 mb-4">Air Quality</h3>
+    @if (CurrentWeather != null)
+    {
+        @if (CurrentWeather.AirQuality != null)
+        {
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm text-slate-600">Overall AQI</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded-full @GetAQIColor(CurrentWeather.AirQuality.EuropeanAqi)"></div>
+                        <span class="font-semibold text-slate-900">@GetAQILevel(CurrentWeather.AirQuality.EuropeanAqi)</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="rounded-xl bg-slate-50 p-4">
+                        <div class="text-sm text-slate-600 mb-1">PM2.5</div>
+                        <div class="text-xl font-semibold text-slate-900">@(CurrentWeather.AirQuality.Pm25 ?? 0) μg/m³</div>
+                    </div>
+                    
+                    <div class="rounded-xl bg-slate-50 p-4">
+                        <div class="text-sm text-slate-600 mb-1">PM10</div>
+                        <div class="text-xl font-semibold text-slate-900">@(CurrentWeather.AirQuality.Pm10 ?? 0) μg/m³</div>
+                    </div>
+                    
+                    <div class="rounded-xl bg-slate-50 p-4">
+                        <div class="text-sm text-slate-600 mb-1">Ozone</div>
+                        <div class="text-xl font-semibold text-slate-900">@(CurrentWeather.AirQuality.Ozone ?? 0) μg/m³</div>
+                    </div>
+                    
+                    <div class="rounded-xl bg-slate-50 p-4">
+                        <div class="text-sm text-slate-600 mb-1">NO₂</div>
+                        <div class="text-xl font-semibold text-slate-900">@(CurrentWeather.AirQuality.NitrogenDioxide ?? 0) μg/m³</div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-8 text-slate-500">
+                <i class="fas fa-wind text-4xl mb-2"></i>
+                <div>Air quality data not available</div>
+                <div class="text-xs text-slate-400 mt-2">Try searching for a different location</div>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center py-8 text-slate-500">
+            <i class="fas fa-cloud text-4xl mb-2"></i>
+            <div>Search for a location to see air quality</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public CurrentWeather? CurrentWeather { get; set; }
+
+    private string GetAQIColor(int? aqi)
+    {
+        if (aqi == null) return "bg-slate-400";
+        
+        return aqi switch
+        {
+            <= 25 => "bg-green-500",
+            <= 50 => "bg-yellow-500",
+            <= 75 => "bg-orange-500",
+            <= 100 => "bg-red-500",
+            _ => "bg-red-700"
+        };
+    }
+
+    private string GetAQILevel(int? aqi)
+    {
+        if (aqi == null) return "Unknown";
+        
+        return aqi switch
+        {
+            <= 25 => "Good",
+            <= 50 => "Fair",
+            <= 75 => "Moderate",
+            <= 100 => "Poor",
+            _ => "Very Poor"
+        };
+    }
+}
