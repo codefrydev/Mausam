@@ -658,6 +658,119 @@ button:hover {
     }
 }
 
+/* Enhanced Search Suggestions */
+.search-suggestions {
+    position: absolute;
+    z-index: 50;
+    margin-top: 0.5rem;
+    width: 100%;
+    max-height: 20rem;
+    overflow-y: auto;
+    border-radius: 0.75rem;
+    border: 1px solid #e2e8f0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.search-suggestion-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    transition: all 0.15s ease;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.search-suggestion-item:hover,
+.search-suggestion-item:focus {
+    background: #f8fafc;
+    outline: none;
+}
+
+.search-suggestion-item.selected {
+    background: #eff6ff;
+    border-left: 4px solid #3b82f6;
+}
+
+.search-suggestion-icon {
+    flex-shrink: 0;
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.search-suggestion-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-suggestion-primary {
+    color: #1e293b;
+    font-weight: 500;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-suggestion-secondary {
+    color: #64748b;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 0.125rem;
+}
+
+.search-suggestion-divider {
+    border-bottom: 1px solid #f1f5f9;
+    margin: 0 1rem;
+}
+
+/* Mobile-specific search improvements */
+@media (max-width: 767px) {
+    .search-suggestions {
+        max-height: 16rem;
+        border-radius: 0.5rem;
+        margin-top: 0.25rem;
+    }
+    
+    .search-suggestion-item {
+        padding: 1rem;
+        gap: 1rem;
+    }
+    
+    .search-suggestion-primary {
+        font-size: 1rem;
+    }
+    
+    .search-suggestion-secondary {
+        font-size: 0.875rem;
+    }
+}
+
+/* Tablet-specific search improvements */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .search-suggestions {
+        max-height: 18rem;
+    }
+}
+
+/* Desktop-specific search improvements */
+@media (min-width: 1024px) {
+    .search-suggestions {
+        max-height: 20rem;
+    }
+    
+    .search-suggestion-item:hover {
+        transform: translateX(2px);
+    }
+}
+
 /* Responsive Button Groups */
 .button-group {
     display: flex;
