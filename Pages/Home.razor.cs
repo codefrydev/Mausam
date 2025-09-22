@@ -35,6 +35,7 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationS
         _ = jsRuntime.InvokeVoidAsync("console.log", $"[Mausam] LocationService instance: {locationService.GetHashCode()}");
         
         // Load default weather data for a popular location (London)
+        _ = jsRuntime.InvokeVoidAsync("console.log", "[Mausam] Loading initial weather data for London, UK");
         await LoadWeatherData(51.5074, -0.1278, "London, UK");
     }
 
@@ -216,6 +217,7 @@ public partial class Home(INominatim nominatim, IOpenMeteo openMeteo, ILocationS
                     }).ToList();
 
                 _locationName = displayName;
+                _ = jsRuntime.InvokeVoidAsync("console.log", $"[Mausam] Location name set to: {_locationName}");
                 StateHasChanged(); // Ensure UI updates with new location name
                 await RenderCharts();
             }
