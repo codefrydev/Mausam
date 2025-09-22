@@ -285,8 +285,18 @@ body {
     grid-template-columns: 1fr;
 }
 
+/* Mobile Grid (2 columns) */
+.mobile-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
 /* Tablet Grid (2 columns) */
 .tablet-grid {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+/* Tablet Grid (2 columns) - same as tablet-grid but explicit */
+.tablet-grid-2 {
     grid-template-columns: repeat(2, 1fr);
 }
 
@@ -314,6 +324,29 @@ body {
 
 .widget-desktop-wide {
     grid-column: span 2;
+}
+
+/* Mobile-specific widget adjustments */
+@media (max-width: 767px) {
+    .widget-desktop-wide {
+        grid-column: span 1;
+    }
+    
+    .mobile-grid-2 {
+        gap: 12px;
+    }
+    
+    .mobile-grid-2 > div {
+        padding: 12px;
+    }
+    
+    .mobile-grid-2 .text-xl {
+        font-size: 1.125rem;
+    }
+    
+    .mobile-grid-2 .text-xs {
+        font-size: 0.75rem;
+    }
 }
 
 /* Container adjustments for responsive layout */
@@ -579,6 +612,141 @@ button:hover {
     
     .weather-icon {
         font-size: 2em;
+    }
+    
+    /* Mobile-specific improvements */
+    .responsive-grid {
+        gap: 12px;
+    }
+    
+    .rounded-xl {
+        border-radius: 12px;
+    }
+    
+    .p-4 {
+        padding: 12px;
+    }
+    
+    .mb-6 {
+        margin-bottom: 1rem;
+    }
+    
+    .mt-6 {
+        margin-top: 1rem;
+    }
+    
+    /* Better mobile text sizing */
+    .text-2xl {
+        font-size: 1.25rem;
+    }
+    
+    .text-lg {
+        font-size: 1rem;
+    }
+    
+    .text-xl {
+        font-size: 1.125rem;
+    }
+    
+    /* Mobile chart container */
+    .chart-container {
+        height: 200px;
+    }
+    
+    /* Mobile button improvements */
+    .px-6 {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .py-3 {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+    
+    /* Mobile search improvements */
+    .flex-col {
+        gap: 0.75rem;
+    }
+    
+    .flex-col .relative {
+        width: 100%;
+    }
+    
+    /* Mobile input improvements */
+    input {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px 16px;
+    }
+    
+    /* Mobile card improvements */
+    .rounded-xl {
+        border-radius: 8px;
+    }
+    
+    /* Mobile spacing improvements */
+    .mb-6 {
+        margin-bottom: 1.5rem;
+    }
+    
+    .mt-6 {
+        margin-top: 1.5rem;
+    }
+    
+    /* Mobile text improvements */
+    .text-8xl {
+        font-size: 4rem;
+    }
+    
+    .text-6xl {
+        font-size: 2.5rem;
+    }
+    
+    .text-3xl {
+        font-size: 1.5rem;
+    }
+    
+    /* Mobile icon improvements */
+    .text-lg {
+        font-size: 1rem;
+    }
+    
+    /* Mobile flex improvements */
+    .gap-2 {
+        gap: 0.5rem;
+    }
+    
+    .gap-3 {
+        gap: 0.75rem;
+    }
+    
+    /* Mobile hourly forecast improvements */
+    .min-w-max {
+        min-width: max-content;
+    }
+    
+    .min-w-\[60px\] {
+        min-width: 50px;
+    }
+    
+    /* Mobile scroll improvements */
+    .overflow-x-auto {
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+    
+    .overflow-x-auto::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .overflow-x-auto::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 2px;
+    }
+    
+    .overflow-x-auto::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 2px;
     }
 }
 
